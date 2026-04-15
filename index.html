@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PubMed 文献检索器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg-primary:#0a0e14;--bg-secondary:#0d1117;--bg-card:#161b22;--bg-card-hover:#1c2128;--border-color:#30363d;--text-primary:#e6edf3;--text-secondary:#8b949e;--text-muted:#6e7681;--accent-cyan:#00d4aa;--accent-cyan-dim:rgba(0,212,170,.15);--accent-blue:#58a6ff;--accent-purple:#a371f7;--accent-orange:#f0883e;--accent-yellow:#d29922;--accent-red:#f85149;--accent-green:#22c55e;--glow-cyan:0 0 20px rgba(0,212,170,.3);--glow-cyan-strong:0 0 40px rgba(0,212,170,.5)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Space Grotesk','Noto Sans SC',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;line-height:1.6}
+.bg-grid{position:fixed;top:0;left:0;right:0;bottom:0;background-image:linear-gradient(rgba(0,212,170,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+.noise-overlay{position:fixed;top:0;left:0;right:0;bottom:0;opacity:.015;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");pointer-events:none;z-index:1}
+.container{position:relative;z-index:2;max-width:1200px;margin:0 auto;padding:0 24px}
+header{padding:48px 0 32px;text-align:center}
+.logo{display:inline-flex;align-items:center;gap:16px;margin-bottom:16px}
+.logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:var(--glow-cyan)}
+.logo-text{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tagline{color:var(--text-secondary);font-size:15px;max-width:500px;margin:0 auto}
+.search-section{padding:32px 0 48px}
+.search-box{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.search-row{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.input-group{flex:1;min-width:280px;position:relative}
+.search-input{width:100%;padding:16px 20px 16px 52px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;color:var(--text-primary);font-size:16px;font-family:inherit;transition:all .3s}
+.search-input:focus{outline:none;border-color:var(--accent-cyan);box-shadow:var(--glow-cyan)}
+.search-input::placeholder{color:var(--text-muted)}
+.input-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--accent-cyan);font-size:18px;opacity:.8}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+select{appearance:none;padding:12px 40px 12px 16px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:14px;font-family:inherit;cursor:pointer;transition:all .3s}
+select:focus{outline:none;border-color:var(--accent-cyan)}
+.select-wrapper{position:relative}
+.select-wrapper::after{content:'▼';position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--accent-cyan);pointer-events:none}
+.btn{padding:14px 28px;border:none;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .3s;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,var(--accent-cyan),#00b894);color:var(--bg-primary);box-shadow:var(--glow-cyan)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:var(--glow-cyan-strong)}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.translate-btn{padding:12px 18px;border-radius:10px;border:1px solid var(--accent-purple);background:rgba(163,113,247,.15);color:var(--accent-purple);font-size:14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:all .3s;font-family:'JetBrains Mono',monospace}
+.translate-btn:hover{background:var(--accent-purple);color:#fff;box-shadow:0 0 20px rgba(163,113,247,.4)}
+.translate-btn:disabled{opacity:.5;cursor:not-allowed}
+.spinner{display:none;width:14px;height:14px;border:2px solid rgba(163,113,247,.3);border-top-color:var(--accent-purple);border-radius:50%;animation:spin .6s linear infinite}
+.translate-btn.loading .spinner{display:inline-block}
+.translate-panel{background:var(--bg-primary);border:1px solid var(--accent-purple);border-radius:14px;padding:20px;margin-top:16px;box-shadow:0 0 30px rgba(163,113,247,.15)}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.panel-title{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent-purple);font-weight:500}
+.panel-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:2px 6px;border-radius:4px}
+.panel-close:hover{color:var(--accent-red)}
+.panel-original{font-size:14px;color:var(--text-secondary);margin-bottom:12px;padding:10px 14px;background:var(--bg-secondary);border-radius:8px;border-left:3px solid var(--accent-purple)}
+.suggestions{display:flex;flex-direction:column;gap:8px}
+.suggestion-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border-color);cursor:pointer;transition:all .2s}
+.suggestion-item:hover{border-color:var(--accent-cyan);background:var(--accent-cyan-dim)}
+.tag{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;font-family:'JetBrains Mono',monospace;flex-shrink:0;margin-top:2px}
+.tag-green{background:rgba(0,212,170,.15);color:var(--accent-cyan);border:1px solid rgba(0,212,170,.4)}
+.tag-blue{background:rgba(88,166,255,.15);color:var(--accent-blue);border:1px solid rgba(88,166,255,.4)}
+.tag-purple{background:rgba(163,113,247,.15);color:var(--accent-purple);border:1px solid rgba(163,113,247,.4)}
+.keyword-text{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-primary);line-height:1.5;word-break:break-word;flex:1}
+.btn-use{padding:3px 10px;border-radius:6px;font-size:12px;background:var(--accent-cyan-dim);border:1px solid var(--accent-cyan);color:var(--accent-cyan);cursor:pointer;white-space:nowrap;flex-shrink:0;margin-top:2px;transition:all .2s}
+.btn-use:hover{background:var(--accent-cyan);color:var(--bg-primary)}
+.no-result{text-align:center;padding:20px;color:var(--text-muted);font-size:14px}
+.hint-tip{margin-top:14px;padding:10px 14px;background:var(--bg-secondary);border-radius:8px;border:1px dashed var(--border-color);font-size:13px;color:var(--text-secondary)}
+.filter-section{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:16px 20px;margin-top:12px}
+.filter-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;user-select:none}
+.filter-header-icon{font-size:14px;color:var(--accent-cyan)}
+.filter-header-text{font-size:13px;font-weight:500;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px}
+.filter-toggle{margin-left:auto;font-size:12px;color:var(--text-muted);transition:transform .3s}
+.filter-toggle.open{transform:rotate(180deg)}
+.filter-body{display:none;flex-direction:column;gap:16px}
+.filter-body.show{display:flex}
+.filter-row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:6px}
+.filter-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace}
+.year-range{display:flex;align-items:center;gap:8px}
+.year-input{width:90px;padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:14px;font-family:'JetBrains Mono',monospace;text-align:center}
+.year-input:focus{outline:none;border-color:var(--accent-cyan)}
+.year-input::placeholder{color:var(--text-muted);font-size:12px}
+.year-sep{color:var(--text-muted);font-size:14px}
+.article-type-list{display:flex;flex-wrap:wrap;gap:8px}
+.type-checkbox{display:none}
+.type-label{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid var(--border-color);font-size:13px;color:var(--text-secondary);cursor:pointer;transition:all .2s;user-select:none}
+.type-label:hover{border-color:var(--accent-cyan);color:var(--accent-cyan)}
+.type-checkbox:checked+.type-label{background:var(--accent-cyan-dim);border-color:var(--accent-cyan);color:var(--accent-cyan)}
+.active-filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.active-filter{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:var(--accent-cyan-dim);border:1px solid var(--accent-cyan);font-size:12px;color:var(--accent-cyan);font-family:'JetBrains Mono',monospace}
+.active-filter-remove{cursor:pointer;opacity:.7;font-size:14px}
+.active-filter-remove:hover{opacity:1}
+.progress-container{display:none;margin-bottom:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:20px 24px}
+.progress-container.active{display:block;border-color:var(--accent-cyan);box-shadow:0 0 20px rgba(0,255,204,.15)}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.progress-phase{font-size:15px;color:var(--accent-cyan);font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.5px}
+.progress-pct{font-size:14px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace}
+.progress-track{width:100%;height:8px;background:var(--bg-primary);border-radius:4px;overflow:hidden;margin-bottom:8px}
+.progress-fill{height:12px;background:linear-gradient(90deg,var(--accent-cyan),var(--accent-blue));border-radius:6px;transition:width .4s ease;box-shadow:0 0 12px rgba(0,212,170,.6);position:relative;overflow:hidden}
+.progress-fill::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:shimmer 1.5s infinite}
+@keyframes shimmer{to{left:100%}}
+.progress-sub{font-size:12px;color:var(--text-muted);font-family:'JetBrains Mono',monospace}
+.results-section{padding:0 0 64px}
+.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border-color);flex-wrap:wrap;gap:12px}
+.results-count{font-family:'JetBrains Mono',monospace;color:var(--text-secondary);font-size:14px}
+.results-count span{color:var(--accent-cyan);font-weight:600}
+.export-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.select-all-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer}
+.select-all-label:hover{color:var(--accent-cyan)}
+.selected-badge{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent-cyan);padding:4px 10px;background:var(--accent-cyan-dim);border-radius:20px;border:1px solid var(--accent-cyan)}
+.btn-export{padding:8px 18px;border-radius:8px;font-size:13px;background:linear-gradient(135deg,var(--accent-blue),#3b82f6);color:#fff;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .3s;box-shadow:0 0 15px rgba(88,166,255,.3)}
+.btn-export:hover{transform:translateY(-1px);box-shadow:0 0 25px rgba(88,166,255,.5)}
+.btn-export:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-export-csv{background:linear-gradient(135deg,var(--accent-green),#16a34a)!important;box-shadow:0 0 15px rgba(34,197,94,.3)!important}
+.loading{display:none;text-align:center;padding:32px 0}
+.loading.active{display:block}
+.spinner-lg{width:40px;height:40px;border:3px solid var(--border-color);border-top-color:var(--accent-cyan);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--text-secondary);font-size:14px}
+.articles{display:flex;flex-direction:column;gap:16px}
+.article-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:20px 24px;transition:all .3s ease;opacity:0;animation:fadeInUp .5s ease forwards;display:flex;align-items:flex-start;gap:16px}
+@keyframes fadeInUp{to{opacity:1;transform:translateY(0)}}
+.article-card:hover{background:var(--bg-card-hover);border-color:var(--accent-cyan);box-shadow:var(--glow-cyan);transform:translateY(-2px)}
+.article-card.selected{border-color:var(--accent-blue);background:rgba(88,166,255,.04)}
+.article-check-col{display:flex;align-items:center;padding-top:4px;flex-shrink:0}
+.article-content{flex:1;min-width:0}
+.article-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+.article-title-area{display:flex;align-items:flex-start;gap:12px;flex:1;min-width:0}
+.article-title{font-family:'Noto Serif SC',serif;font-size:19px;font-weight:600;line-height:1.4;color:var(--text-primary);flex:1}
+.article-title a{color:inherit;text-decoration:none}
+.article-title a:hover{color:var(--accent-cyan)}
+.detail-btn{padding:7px 13px;border-radius:8px;background:var(--accent-cyan-dim);border:1px solid var(--accent-cyan);color:var(--accent-cyan);font-size:13px;font-weight:500;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.detail-btn:hover{background:var(--accent-cyan);color:var(--bg-primary)}
+.detail-btn.active{background:var(--accent-cyan);color:var(--bg-primary)}
+.translate-btn-sm{padding:7px 13px;border-radius:8px;background:rgba(163,113,247,.1);border:1px solid rgba(163,113,247,.4);color:var(--accent-purple);font-size:13px;font-weight:500;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.translate-btn-sm:hover{background:rgba(163,113,247,.25);border-color:var(--accent-purple)}
+.translate-btn-sm.active{background:var(--accent-purple);color:#fff;border-color:var(--accent-purple)}
+.pmid-badge{font-family:'JetBrains Mono',monospace;font-size:12px;padding:5px 10px;background:var(--accent-cyan-dim);color:var(--accent-cyan);border-radius:6px;white-space:nowrap;text-decoration:none;flex-shrink:0}
+.pubtype-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.pubtype-tag{font-size:11px;padding:3px 10px;border-radius:12px;background:rgba(163,113,247,.15);border:1px solid rgba(163,113,247,.4);color:var(--accent-purple);font-family:'JetBrains Mono',monospace}
+.article-meta{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:14px;color:var(--text-secondary)}
+.meta-item{display:flex;align-items:center;gap:6px}
+.meta-icon{opacity:.6}
+.authors{color:var(--text-secondary);font-size:14px;margin-bottom:6px}
+.authors span{color:var(--accent-blue)}
+.et-al{color:var(--accent-purple);font-style:italic}
+.article-abstract{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)}
+.abstract-label{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent-orange);margin-bottom:6px}
+.abstract-text{font-size:14px;color:var(--text-secondary);line-height:1.7;max-height:120px;overflow:hidden;position:relative}
+.abstract-text::after{content:'';position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg-card))}
+.article-card:hover .abstract-text{max-height:500px}
+.article-card:hover .abstract-text::after{display:none}
+.detail-panel{display:none;margin-top:16px;padding:20px;background:var(--bg-primary);border:1px solid var(--accent-cyan);border-radius:12px;box-shadow:var(--glow-cyan)}
+.detail-panel.open{display:block}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.detail-item{display:flex;flex-direction:column;gap:4px}
+.detail-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace}
+.detail-value{font-size:14px;color:var(--text-primary);word-break:break-word}
+.detail-value a{color:var(--accent-blue);text-decoration:none}
+.detail-value a:hover{text-decoration:underline}
+.detail-full-title{grid-column:1/-1;font-size:16px;font-weight:600;font-family:'Noto Serif SC',serif;color:var(--text-primary);padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+.detail-authors-full{grid-column:1/-1}
+.detail-authors-full .detail-value{color:var(--accent-blue);line-height:1.8}
+.detail-abstract-full{grid-column:1/-1;margin-top:4px}
+.detail-abstract-full .detail-value{font-size:14px;line-height:1.8;color:var(--text-secondary);max-height:300px;overflow-y:auto;padding-right:8px}
+.detail-links{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--border-color)}
+.detail-link{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);font-size:13px;text-decoration:none;transition:all .2s}
+.detail-link:hover{border-color:var(--accent-cyan);color:var(--accent-cyan)}
+.detail-link-doi{background:var(--accent-cyan-dim);border-color:var(--accent-cyan);color:var(--accent-cyan)}
+.bibtex-block{grid-column:1/-1}
+.bibtex-block pre{background:var(--bg-secondary);padding:12px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);margin-top:6px;border:1px solid var(--border-color);max-height:250px;overflow-y:auto}
+
+/* Article translation section */
+.article-translation{margin-top:14px;padding-top:14px;border-top:1px solid rgba(163,113,247,.3)}
+.translation-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.translation-label{font-size:11px;font-weight:500;color:var(--accent-purple);text-transform:uppercase;letter-spacing:1px;font-family:'JetBrains Mono',monospace}
+.translation-lang-toggle{display:flex;gap:6px}
+.translation-lang-btn{padding:4px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border-color);background:transparent;color:var(--text-muted);font-family:'JetBrains Mono',monospace;transition:all .2s}
+.translation-lang-btn.active{background:rgba(163,113,247,.2);border-color:var(--accent-purple);color:var(--accent-purple)}
+.translation-row{margin-bottom:10px}
+.translation-row:last-child{margin-bottom:0}
+.translation-row-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+.translation-original{font-size:14px;color:var(--text-muted);line-height:1.6;opacity:.75}
+.translation-text{font-size:14px;color:var(--accent-purple);line-height:1.6;font-weight:500}
+.translation-loading{font-size:13px;color:var(--text-muted);padding:8px 0}
+.translation-loading .spinner-sm{display:inline-block;width:12px;height:12px;border:2px solid rgba(163,113,247,.3);border-top-color:var(--accent-purple);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+.empty-state{text-align:center;padding:80px 20px;color:var(--text-secondary)}
+.empty-icon{font-size:64px;margin-bottom:24px;opacity:.5}
+.empty-title{font-size:20px;margin-bottom:8px;color:var(--text-primary)}
+.empty-desc{font-size:15px}
+.error-message{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:12px;padding:20px;margin:24px 0;color:#f85149;text-align:center}
+footer{text-align:center;padding:32px 0;border-top:1px solid var(--border-color);color:var(--text-muted);font-size:13px}
+footer a{color:var(--accent-cyan);text-decoration:none}
+footer a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:10px}
+::-webkit-scrollbar-track{background:var(--bg-primary)}
+::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+@media(max-width:768px){.search-row{flex-direction:column}.input-group{min-width:100%}.controls{width:100%}.detail-grid{grid-template-columns:1fr}.filter-row{flex-direction:column;align-items:flex-start}.article-card{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="noise-overlay"></div>
+<div class="container">
+
+<header>
+<div class="logo"><div class="logo-icon">&#128269;</div><span class="logo-text">PubMed 文献检索</span></div>
+<p class="tagline">基于 NCBI E-utilities API，支持中文翻译推荐、高级筛选与批量导出</p>
+</header>
+
+<section class="search-section">
+<div class="search-box">
+<div class="search-row">
+<div class="input-group">
+<span class="input-icon">&#128269;</span>
+<input type="text" class="search-input" id="queryInput" placeholder="输入中文或英文关键词，如: diabetes treatment..." autocomplete="off">
+</div>
+<div class="controls">
+<select id="maxResults">
+<option value="100">100 条</option>
+<option value="500">500 条</option>
+<option value="1000" selected>1000 条</option>
+<option value="5000">5000 条</option>
+<option value="10000">10000 条（最大）</option>
+</select>
+<select id="sortOrder">
+<option value="relevance">相关性排序</option>
+<option value="pub+date">最新发布</option>
+</select>
+<button type="button" class="btn btn-primary" id="searchBtn">搜索</button>
+<button type="button" class="translate-btn" id="translateBtn">
+<span class="spinner"></span>
+<span id="translateBtnText">&#128259; 翻译</span>
+</button>
+</div>
+</div>
+
+<div id="translatePanel" style="display:none;"></div>
+
+<div class="filter-section">
+<div class="filter-header" id="filterToggle">
+<span class="filter-header-icon">&#9881;</span>
+<span class="filter-header-text">高级筛选</span>
+<span class="filter-toggle" id="filterToggleIcon">&#9660;</span>
+</div>
+<div class="filter-body" id="filterBody">
+<div class="filter-row">
+<div class="filter-group">
+<label class="filter-label">年份范围</label>
+<div class="year-range">
+<input type="number" class="year-input" id="yearMin" placeholder="起始年" min="1900" max="2030">
+<span class="year-sep">&#8212;</span>
+<input type="number" class="year-input" id="yearMax" placeholder="结束年" min="1900" max="2030">
+</div>
+</div>
+<div class="filter-group" style="flex:1;">
+<label class="filter-label">文献类型</label>
+<div class="article-type-list">
+<input type="checkbox" id="pt-ct" class="type-checkbox" value="clinical-trial"><label for="pt-ct" class="type-label">临床试验</label>
+<input type="checkbox" id="pt-rv" class="type-checkbox" value="review"><label for="pt-rv" class="type-label">综述</label>
+<input type="checkbox" id="pt-ma" class="type-checkbox" value="meta-analysis"><label for="pt-ma" class="type-label">Meta分析</label>
+<input type="checkbox" id="pt-rct" class="type-checkbox" value="randomized-controlled-trial"><label for="pt-rct" class="type-label">RCT</label>
+<input type="checkbox" id="pt-cr" class="type-checkbox" value="case-reports"><label for="pt-cr" class="type-label">病例报告</label>
+<input type="checkbox" id="pt-pg" class="type-checkbox" value="practice-guideline"><label for="pt-pg" class="type-label">临床指南</label>
+<input type="checkbox" id="pt-cs" class="type-checkbox" value="comparative-study"><label for="pt-cs" class="type-label">比较研究</label>
+<input type="checkbox" id="pt-mc" class="type-checkbox" value="multicenter-study"><label for="pt-mc" class="type-label">多中心研究</label>
+<input type="checkbox" id="pt-vs" class="type-checkbox" value="validation-study"><label for="pt-vs" class="type-label">验证研究</label>
+<input type="checkbox" id="pt-os" class="type-checkbox" value="observational-study"><label for="pt-os" class="type-label">观察性研究</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="active-filters" id="activeFilters"></div>
+</div>
+</section>
+
+<section class="results-section">
+<div class="progress-container" id="progressContainer">
+<div class="progress-header">
+<span class="progress-phase" id="progressPhase">正在检索...</span>
+<span class="progress-pct" id="progressPct">0%</span>
+</div>
+<div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+<div class="progress-sub" id="progressSub">准备中...</div>
+</div>
+<div class="results-header" id="resultsHeader" style="display:none;">
+<span class="results-count">找到 <span id="resultCount">0</span> 篇文献</span>
+<div class="export-controls">
+<label class="select-all-label"><input type="checkbox" class="select-checkbox" id="selectAll"> 全选</label>
+<span class="selected-badge" id="selectedBadge" style="display:none;">已选 0 篇</span>
+<button class="btn-export" id="exportBibBtn" disabled onclick="doExportBib()">&#128230; BibTeX</button>
+<button class="btn-export btn-export-csv" id="exportCsvBtn" disabled onclick="doExportCsv()">&#128202; CSV</button>
+</div>
+</div>
+<div class="loading" id="loading"><div class="spinner-lg"></div><p class="loading-text" id="loadingText">正在检索...</p></div>
+<div class="articles" id="articles"></div>
+<div id="scrollSentinel" style="height:1px;visibility:hidden;"></div>
+<div id="moreLoader" style="display:none;padding:20px;text-align:center;color:var(--text-muted);font-size:14px;">
+  <span style="display:inline-block;width:20px;height:20px;border:2px solid var(--accent);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:8px;"></span>
+  正在加载更多...
+</div>
+<div id="scrollEnd" style="display:none;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">
+  — 已加载全部相关文献 —
+</div>
+</section>
+
+<footer>
+<p>数据来源: <a href="https://pubmed.ncbi.nlm.nih.gov/" target="_blank">PubMed</a> | API: <a href="https://www.ncbi.nlm.nih.gov/home/develop/api/" target="_blank">NCBI E-utilities</a></p>
+</footer>
+</div>
+
+<script>
+(function() {
+'use strict';
+
+// ---- Global State ----
+var allArticles = {};
+var selectedPMIDs = {};
+var currentTaskId = null;
+var pollTimer = null;
+var pmidQueue = [];         // 待自动翻译的 PMID 队列
+var autoTranslateTimer = null; // 自动翻译定时器
+
+// ---- Translation Cache ----
+var translationCache = {};  // pmid -> { title_en, title_zh, abstract_en, abstract_zh }
+var translationLoading = {}; // pmid -> true while loading
+var translationRequested = {}; // pmid -> true, 已触发过（防止重复请求）
+
+// ---- Article Translation ----
+// 自动请求并显示翻译（显示面板 + 触发请求）
+function requestArticleTranslate(pmid) {
+    var btn = document.getElementById('transbtn-' + pmid);
+    var panel = document.getElementById('trans-' + pmid);
+    if (!panel) return;
+
+    // 打开面板
+    panel.style.display = 'block';
+    if (btn) { btn.classList.add('active'); }
+
+    if (translationCache[pmid]) {
+        renderTranslationPanel(pmid, translationCache[pmid]);
+    } else if (!translationLoading[pmid]) {
+        fetchArticleTranslation(pmid);
+    }
+}
+
+// 按钮切换（保留手动关闭功能）
+function toggleArticleTranslate(pmid) {
+    var btn = document.getElementById('transbtn-' + pmid);
+    var panel = document.getElementById('trans-' + pmid);
+    if (!panel) return;
+
+    var isOpen = panel.style.display !== 'none';
+
+    if (isOpen) {
+        panel.style.display = 'none';
+        if (btn) { btn.classList.remove('active'); }
+    } else {
+        requestArticleTranslate(pmid);
+    }
+}
+
+// 批量触发自动翻译（每篇间隔 delayMs，防止 API 限速）
+function autoTranslateArticles(pmids, delayMs) {
+    delayMs = delayMs || 700;  // 每篇间隔 700ms，避免触发 MyMemory 限速
+    pmidQueue = pmidQueue.concat(pmids.filter(function(p) { return !translationRequested[p]; }));
+    if (autoTranslateTimer) clearTimeout(autoTranslateTimer);
+    autoTranslateTimer = setTimeout(function processQueue() {
+        if (pmidQueue.length === 0) return;
+        var p = pmidQueue.shift();
+        translationRequested[p] = true;
+        requestArticleTranslate(p);
+        if (pmidQueue.length > 0) {
+            autoTranslateTimer = setTimeout(processQueue, delayMs);
+        }
+    }, 300); // 首篇 300ms 后开始，之后每篇 delayMs
+}
+
+function fetchArticleTranslation(pmid) {
+    var a = allArticles[pmid];
+    if (!a) return;
+
+    translationLoading[pmid] = true;
+    var panel = document.getElementById('trans-' + pmid);
+    if (panel) {
+        panel.innerHTML = '<div class="translation-loading"><span class="spinner-sm"></span>正在翻译，请稍候...</div>';
+    }
+
+    fetch('/api/article/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            articles: [{ pmid: pmid, title: a.title || '', abstract: a.abstract || '' }]
+        })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        var t = data.translations && data.translations[pmid];
+        if (t) {
+            translationCache[pmid] = t;
+            renderTranslationPanel(pmid, t);
+        } else {
+            showTranslationError(pmid);
+        }
+    })
+    .catch(function() {
+        showTranslationError(pmid);
+    })
+    .finally(function() {
+        translationLoading[pmid] = false;
+    });
+}
+
+function renderTranslationPanel(pmid, t) {
+    var panel = document.getElementById('trans-' + pmid);
+    if (!panel) return;
+
+    // 优先用 API 返回的原始文本；没有的话用前端 article 里的原文
+    var origTitle = t.title_en || (allArticles[pmid] || {}).title || '';
+    var origAbstract = t.abstract_en || (allArticles[pmid] || {}).abstract || '';
+    var transTitle = t.title_zh || '';
+    var transAbstract = t.abstract_zh || '';
+
+    // 判断哪个方向翻译成功了
+    var titleHasTrans = transTitle && transTitle !== origTitle;
+    var abstractHasTrans = transAbstract && transAbstract !== origAbstract;
+
+    var html = '<div class="translation-header">' +
+        '<span class="translation-label">&#127760; 中英文对照翻译</span>' +
+        '</div>';
+
+    if (titleHasTrans) {
+        html += '<div class="translation-row">' +
+            '<div class="translation-row-label">EN 原文</div>' +
+            '<div class="translation-original">' + esc(origTitle) + '</div>' +
+            '</div>';
+        html += '<div class="translation-row">' +
+            '<div class="translation-row-label">ZH 翻译</div>' +
+            '<div class="translation-text">' + esc(transTitle) + '</div>' +
+            '</div>';
+    }
+
+    if (abstractHasTrans) {
+        html += '<div class="translation-row">' +
+            '<div class="translation-row-label">EN 摘要原文</div>' +
+            '<div class="translation-original">' + esc(origAbstract) + '</div>' +
+            '</div>';
+        html += '<div class="translation-row">' +
+            '<div class="translation-row-label">ZH 摘要翻译</div>' +
+            '<div class="translation-text">' + esc(transAbstract) + '</div>' +
+            '</div>';
+    }
+
+    if (!titleHasTrans && !abstractHasTrans) {
+        panel.innerHTML = '<div class="translation-loading" style="color:var(--text-muted);font-size:13px;">&#9888; 翻译服务暂时不可用</div>';
+        return;
+    }
+
+    panel.innerHTML = html;
+}
+
+function showTranslationError(pmid) {
+    var panel = document.getElementById('trans-' + pmid);
+    if (panel) {
+        panel.innerHTML = '<div class="translation-loading" style="color:var(--accent-red);font-size:13px;">&#9888; 翻译失败，请重试</div>';
+    }
+}
+
+// ---- DOM Ready ----
+document.addEventListener('DOMContentLoaded', init);
+
+function init() {
+    // Filter toggle
+    var ft = document.getElementById('filterToggle');
+    var fb = document.getElementById('filterBody');
+    var fi = document.getElementById('filterToggleIcon');
+    if (ft && fb && fi) {
+        ft.addEventListener('click', function() {
+            fb.classList.toggle('show');
+            fi.classList.toggle('open');
+        });
+    }
+
+    // Checkbox filters
+    var cbs = document.querySelectorAll('.type-checkbox');
+    for (var i = 0; i < cbs.length; i++) {
+        cbs[i].addEventListener('change', renderActiveFilters);
+    }
+    var ym = document.getElementById('yearMin');
+    var yx = document.getElementById('yearMax');
+    if (ym) ym.addEventListener('input', renderActiveFilters);
+    if (yx) yx.addEventListener('input', renderActiveFilters);
+
+    // Search button
+    var sb = document.getElementById('searchBtn');
+    if (sb) sb.addEventListener('click', doSearch);
+
+    // Enter key in input
+    var qi = document.getElementById('queryInput');
+    if (qi) {
+        qi.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doSearch();
+            }
+        });
+    }
+
+    // Translate button
+    var tb = document.getElementById('translateBtn');
+    if (tb) tb.addEventListener('click', doTranslate);
+
+    // Select all
+    var sa = document.getElementById('selectAll');
+    if (sa) sa.addEventListener('change', toggleSelectAll);
+
+    // Focus
+    if (qi) qi.focus();
+
+    console.log('PubMed app initialized');
+}
+
+// ---- Utility ----
+function esc(s) {
+    if (!s && s !== 0) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+// ---- Active Filters ----
+function getActiveFilters() {
+    var f = [];
+    var ym = document.getElementById('yearMin');
+    var yx = document.getElementById('yearMax');
+    if (ym && ym.value) f.push({type:'year', label:'从 '+ym.value+' 年', key:'yearMin', value:ym.value});
+    if (yx && yx.value) f.push({type:'year', label:'至 '+yx.value+' 年', key:'yearMax', value:yx.value});
+    var cbs = document.querySelectorAll('.type-checkbox:checked');
+    for (var i = 0; i < cbs.length; i++) {
+        f.push({type:'pt', label:cbs[i].nextElementSibling.textContent, key:cbs[i].id, value:cbs[i].value});
+    }
+    return f;
+}
+
+function renderActiveFilters() {
+    var el = document.getElementById('activeFilters');
+    if (!el) return;
+    var f = getActiveFilters();
+    var html = '';
+    for (var i = 0; i < f.length; i++) {
+        var x = f[i];
+        html += '<span class="active-filter">' + esc(x.label) +
+            '<span class="active-filter-remove" data-key="' + esc(x.key) + '" data-type="' + esc(x.type) + '">&#215;</span></span>';
+    }
+    el.innerHTML = html;
+    var rms = el.querySelectorAll('.active-filter-remove');
+    for (var j = 0; j < rms.length; j++) {
+        rms[j].addEventListener('click', function() {
+            var key = this.getAttribute('data-key');
+            var type = this.getAttribute('data-type');
+            if (type === 'year') {
+                var inp = document.getElementById(key);
+                if (inp) inp.value = '';
+            } else {
+                var cb = document.getElementById(key);
+                if (cb) cb.checked = false;
+            }
+            renderActiveFilters();
+        });
+    }
+}
+
+// ---- Translation ----
+function doTranslate() {
+    var qi = document.getElementById('queryInput');
+    var tb = document.getElementById('translateBtn');
+    var tbt = document.getElementById('translateBtnText');
+    if (!qi || !tb || !tbt) return;
+
+    var q = qi.value.trim();
+    if (!q) {
+        alert('请先输入搜索关键词');
+        return;
+    }
+
+    tb.disabled = true;
+    tb.classList.add('loading');
+    tbt.textContent = '翻译中...';
+
+    fetch('/api/translate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({term: q})
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        showTranslatePanel(q, data.suggestions || []);
+    })
+    .catch(function() {
+        showTranslatePanel(q, []);
+    })
+    .finally(function() {
+        tb.disabled = false;
+        tb.classList.remove('loading');
+        tbt.textContent = '\uD83D\uDD01 翻译';
+    });
+}
+
+function showTranslatePanel(original, suggestions) {
+    var panel = document.getElementById('translatePanel');
+    if (!panel) return;
+
+    var title = '<span class="panel-title">&#128259; 翻译推荐 — "' + esc(original) + '"</span>';
+    var orig = '<div class="panel-original">原文: <strong>' + esc(original) + '</strong></div>';
+
+    var items = '';
+    if (!suggestions || suggestions.length === 0) {
+        items = '<div class="no-result">未找到推荐关键词，可直接用中文搜索</div>';
+    } else {
+        for (var i = 0; i < suggestions.length; i++) {
+            var s = suggestions[i];
+            var tagClass = s.type === 'dictionary' ? 'tag-green' : s.type === 'component' ? 'tag-blue' : 'tag-purple';
+            var safeKw = s.keyword.replace(/'/g, "\\'");
+            var safeKwAttr = s.keyword.replace(/'/g, "&#39;");
+            items += '<div class="suggestion-item" data-kw="' + safeKwAttr + '">' +
+                '<span class="tag ' + tagClass + '">' + esc(s.label) + '</span>' +
+                '<span class="keyword-text">' + esc(s.keyword) + '</span>' +
+                '<button class="btn-use" data-kw="' + safeKwAttr + '">&#10003; 使用</button>' +
+                '</div>';
+        }
+    }
+
+    panel.innerHTML =
+        '<div class="panel-header">' + title +
+        '<button class="panel-close" id="panelClose">&#215;</button></div>' +
+        orig + '<div class="suggestions">' + items + '</div>' +
+        '<div class="hint-tip">&#128161; 也可以直接用中文搜索，系统会自动匹配相关英文术语组合</div>';
+
+    panel.style.display = 'block';
+
+    // Event: close
+    var closeBtn = document.getElementById('panelClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeTranslatePanel);
+
+    // Event: use keyword buttons
+    var useBtns = panel.querySelectorAll('.btn-use');
+    for (var j = 0; j < useBtns.length; j++) {
+        useBtns[j].addEventListener('click', function() {
+            useKeyword(this.getAttribute('data-kw'));
+        });
+    }
+
+    // Event: click on suggestion item
+    var suggItems = panel.querySelectorAll('.suggestion-item');
+    for (var k = 0; k < suggItems.length; k++) {
+        suggItems[k].addEventListener('click', function() {
+            useKeyword(this.getAttribute('data-kw'));
+        });
+    }
+}
+
+function closeTranslatePanel() {
+    var panel = document.getElementById('translatePanel');
+    if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+}
+
+function useKeyword(kw) {
+    var qi = document.getElementById('queryInput');
+    if (qi) qi.value = kw;
+    closeTranslatePanel();
+    doSearch();
+}
+
+// ---- Search ----
+var PHASE_TEXT = {
+    'initializing': '\u6b63\u5728\u521d\u59cb\u5316...',
+    'searching': '\u6b63\u5728\u68c0\u7d22 PubMed...',
+    'details': '\u6b63\u5728\u83b7\u53d6\u6587\u732e\u8be6\u60c5...',
+    'abstracts': '\u6b63\u5728\u83b7\u53d6\u6458\u8981...',
+    'done': '\u68c0\u7d22\u5b8c\u6210!'
+};
+
+function doSearch() {
+    var qi = document.getElementById('queryInput');
+    var mr = document.getElementById('maxResults');
+    var so = document.getElementById('sortOrder');
+    var sb = document.getElementById('searchBtn');
+    if (!qi || !sb) return;
+
+    var q = qi.value.trim();
+    if (!q) { alert('请输入搜索关键词'); return; }
+
+    var ym = '', yx = '';
+    var ymEl = document.getElementById('yearMin');
+    var yxEl = document.getElementById('yearMax');
+    if (ymEl) ym = ymEl.value;
+    if (yxEl) yx = yxEl.value;
+
+    var ats = [];
+    var cbs = document.querySelectorAll('.type-checkbox:checked');
+    for (var i = 0; i < cbs.length; i++) ats.push(cbs[i].value);
+
+    closeTranslatePanel();
+    hasMore = false;
+    currentTaskId = null;  // 新搜索开始，清空旧任务ID
+    removeInfiniteScroll();
+
+    // Reset
+    var artEl = document.getElementById('articles');
+    var rhEl = document.getElementById('resultsHeader');
+    var loadEl = document.getElementById('loading');
+    if (artEl) artEl.innerHTML = '';
+    if (rhEl) rhEl.style.display = 'none';
+    selectedPMIDs = {};
+    allArticles = {};
+    translationCache = {};
+    translationLoading = {};
+    translationRequested = {};
+    pmidQueue = [];
+    if (autoTranslateTimer) { clearTimeout(autoTranslateTimer); autoTranslateTimer = null; }
+    if (sb) { sb.disabled = true; sb.textContent = '搜索中...'; }
+    if (loadEl) { loadEl.classList.remove('active'); loadEl.style.display = 'none'; }
+
+    // Show progress
+    var pc = document.getElementById('progressContainer');
+    var pf = document.getElementById('progressFill');
+    var pp = document.getElementById('progressPct');
+    var ph = document.getElementById('progressPhase');
+    var ps = document.getElementById('progressSub');
+    if (pc) pc.classList.add('active');
+    if (pf) pf.style.width = '0%';
+    if (pp) pp.textContent = '0%';
+    if (ph) ph.textContent = '\u6b63\u5728\u53d1\u8d77\u641c\u7d22\u8bf7\u6c42...';
+    if (ps) ps.textContent = '\u5173\u952e\u8bcd: ' + q;
+
+    fetch('/api/search', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            query: q,
+            max_results: parseInt(mr ? mr.value : 100),
+            sort: so ? so.value : 'relevance',
+            year_min: ym,
+            year_max: yx,
+            article_types: ats
+        })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.error) {
+            showError(data.error);
+            return;
+        }
+        currentTaskId = data.task_id;
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(pollTask, 500);
+    })
+    .catch(function(err) {
+        showError('\u8bf7\u6c42\u5931\u8d25: ' + err.message);
+    });
+}
+
+function pollTask() {
+    if (!currentTaskId) { clearInterval(pollTimer); return; }
+
+    fetch('/api/task/' + currentTaskId)
+    .then(function(res) { return res.json(); })
+    .then(function(task) {
+        var pf = document.getElementById('progressFill');
+        var pp = document.getElementById('progressPct');
+        var ph = document.getElementById('progressPhase');
+        var ps = document.getElementById('progressSub');
+
+        if (pf) pf.style.width = task.progress + '%';
+        if (pp) pp.textContent = task.progress + '%';
+        if (ph) ph.textContent = PHASE_TEXT[task.phase] || task.phase;
+        if (ps) ps.textContent = '已加载 ' + task.loaded + ' / ' + (task.pmids_count || task.loaded) + ' 条' + (task.remaining_count > 0 ? '，还有 ' + task.remaining_count + ' 条待加载' : ' (全部加载完毕)') + ' (PubMed 共 ' + task.total.toLocaleString() + ' 篇)';
+
+
+        if (task.status === 'done') {
+            clearInterval(pollTimer);
+            pollTimer = null;
+            // 注意：不清空 currentTaskId，后续滚动加载还需要它
+            setTimeout(function() {
+                var pc = document.getElementById('progressContainer');
+                var loadEl = document.getElementById('loading');
+                if (pc) pc.classList.remove('active');
+                if (loadEl) loadEl.classList.remove('active');
+                // has_more 由后端直接返回，基于 remaining_pmids 是否为空
+                hasMore = !!task.has_more;
+                renderArticles(task.articles, task.query, task.total);
+                if (hasMore) setupInfiniteScroll();
+                // 自动翻译所有已渲染的文章
+                var pmidList = task.articles.map(function(a) { return a.pmid; });
+                if (pmidList.length > 0) autoTranslateArticles(pmidList, 200);
+
+            }, 400);
+        } else if (task.status === 'error') {
+            clearInterval(pollTimer);
+            pollTimer = null;
+            showError(task.error || '\u53d1\u751f\u672a\u77e5\u9519\u8bef');
+        }
+    })
+    .catch(function() { clearInterval(pollTimer); });
+}
+
+function showError(msg) {
+    var pc = document.getElementById('progressContainer');
+    var loadEl = document.getElementById('loading');
+    var artEl = document.getElementById('articles');
+    var sb = document.getElementById('searchBtn');
+    if (pc) pc.classList.remove('active');
+    if (loadEl) loadEl.classList.remove('active');
+    if (artEl) artEl.innerHTML = '<div class="error-message">' + esc(msg) + '</div>';
+    if (sb) { sb.disabled = false; sb.textContent = '搜索'; }
+}
+
+// ---- Infinite Scroll ----
+var hasMore = false;
+var isLoadingMore = false;
+var sentinelEl = null;
+var scrollObserver = null;
+
+function setupInfiniteScroll() {
+    removeInfiniteScroll();
+    sentinelEl = document.getElementById('scrollSentinel');
+    if (!sentinelEl) return;
+    scrollObserver = new IntersectionObserver(function(entries) {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+            loadMoreArticles();
+        }
+    }, { rootMargin: '200px' });
+    scrollObserver.observe(sentinelEl);
+}
+
+function removeInfiniteScroll() {
+    if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+}
+
+function loadMoreArticles() {
+    console.log('[InfiniteScroll] trigger → hasMore:', hasMore, 'isLoadingMore:', isLoadingMore, 'currentTaskId:', currentTaskId);
+    if (isLoadingMore || !hasMore || !currentTaskId) return;
+    isLoadingMore = true;
+    var sb = document.getElementById('searchBtn');
+    if (sb) { sb.disabled = true; sb.textContent = '加载中...'; }
+    var moreEl = document.getElementById('moreLoader');
+    if (moreEl) moreEl.style.display = 'flex';
+
+    fetch('/api/task/' + currentTaskId + '/more')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        console.log('[InfiniteScroll] /more → has_more:', data.has_more, 'loaded:', data.loaded, 'remaining:', data.remaining_count, 'newArticles:', data.articles ? data.articles.length : 0);
+        hasMore = data.has_more;
+        var rcEl = document.getElementById('resultCount');
+        if (rcEl) rcEl.textContent = data.loaded.toLocaleString();
+        var ps = document.getElementById('progressSub');
+        if (ps) ps.textContent = '已加载 ' + data.loaded + ' 条' + (data.remaining_count > 0 ? '，还有 ' + data.remaining_count + ' 条待加载' : ' (全部加载完毕)');
+
+        // append new articles
+        if (data.articles && data.articles.length > 0) {
+            var artEl = document.getElementById('articles');
+            for (var i = 0; i < data.articles.length; i++) {
+                allArticles[data.articles[i].pmid] = data.articles[i];
+            }
+            var html = [];
+            var baseIdx = artEl.querySelectorAll('.article-card').length;
+            for (var j = 0; j < data.articles.length; j++) {
+                html.push(buildArticleCard(data.articles[j], baseIdx + j));
+            }
+            artEl.insertAdjacentHTML('beforeend', html.join(''));
+
+            // rebind events for new cards
+            var cbs = artEl.querySelectorAll('.article-check');
+            for (var k = 0; k < cbs.length; k++) {
+                cbs[k].removeEventListener('change', handleCheckChange);
+                cbs[k].addEventListener('change', handleCheckChange);
+            }
+            var dbs = artEl.querySelectorAll('.detail-btn');
+            for (var l = 0; l < dbs.length; l++) {
+                dbs[l].removeEventListener('click', handleDetailClick);
+                dbs[l].addEventListener('click', handleDetailClick);
+            }
+            // 自动翻译新加载的文章（间隔更长，避免 API 限速）
+            if (data.articles.length > 0) {
+                autoTranslateArticles(data.articles.map(function(a) { return a.pmid; }), 300);
+            }
+        }
+
+        var moreEl = document.getElementById('moreLoader');
+        if (moreEl) moreEl.style.display = 'none';
+        var sb = document.getElementById('searchBtn');
+        if (sb) { sb.disabled = false; sb.textContent = '搜索'; }
+        isLoadingMore = false;
+        if (!hasMore) {
+            var endEl = document.getElementById('scrollEnd');
+            if (endEl) {
+                var loaded = document.getElementById('resultCount') ? document.getElementById('resultCount').textContent : '';
+                endEl.innerHTML = '&#8212; 已全部加载完毕，共 ' + loaded + ' 篇 &#8212;';
+                endEl.style.display = 'block';
+            }
+        }
+    })
+    .catch(function(err) {
+        console.error('Load more error:', err);
+        var moreEl = document.getElementById('moreLoader');
+        if (moreEl) moreEl.style.display = 'none';
+        var sb = document.getElementById('searchBtn');
+        if (sb) { sb.disabled = false; sb.textContent = '搜索'; }
+        isLoadingMore = false;
+    });
+}
+
+// ---- Render Articles ----
+function renderArticles(list, query, totalCount) {
+    var artEl = document.getElementById('articles');
+    var rhEl = document.getElementById('resultsHeader');
+    var rcEl = document.getElementById('resultCount');
+    var sb = document.getElementById('searchBtn');
+    if (!artEl) return;
+    var scrollEnd = document.getElementById('scrollEnd');
+    var moreLoader = document.getElementById('moreLoader');
+    if (scrollEnd) scrollEnd.style.display = 'none';
+    if (moreLoader) moreLoader.style.display = 'none';
+
+    if (!list || list.length === 0) {
+        artEl.innerHTML =
+            '<div class="empty-state"><div class="empty-icon">&#128583;</div>' +
+            '<h3 class="empty-title">未找到相关文献</h3>' +
+            '<p class="empty-desc">尝试调整筛选条件或使用不同的关键词</p></div>';
+        if (sb) { sb.disabled = false; sb.textContent = '搜索'; }
+        return;
+    }
+
+    for (var i = 0; i < list.length; i++) {
+        allArticles[list[i].pmid] = list[i];
+    }
+
+    if (rcEl) rcEl.textContent = totalCount ? totalCount.toLocaleString() : list.length;
+    if (rhEl) rhEl.style.display = 'flex';
+    renderActiveFilters();
+
+    var html = [];
+    for (var j = 0; j < list.length; j++) {
+        html.push(buildArticleCard(list[j], j));
+    }
+    artEl.innerHTML = html.join('');
+
+    // Bind checkbox events
+    var cbs = artEl.querySelectorAll('.article-check');
+    for (var k = 0; k < cbs.length; k++) {
+        cbs[k].addEventListener('change', handleCheckChange);
+    }
+
+    // Bind detail buttons
+    var dbs = artEl.querySelectorAll('.detail-btn');
+    for (var l = 0; l < dbs.length; l++) {
+        dbs[l].addEventListener('click', handleDetailClick);
+    }
+
+    if (sb) { sb.disabled = false; sb.textContent = '搜索'; }
+}
+
+function buildArticleCard(a, idx) {
+    var pmid = a.pmid;
+    var delay = Math.min(idx * 0.03, 1.5);
+
+    // Authors
+    var authHtml = '';
+    for (var ai = 0; ai < a.authors.length; ai++) {
+        authHtml += '<span>' + esc(a.authors[ai]) + '</span>';
+        if (ai < a.authors.length - 1) authHtml += ', ';
+    }
+    if (a.author_count > 5) authHtml += '<span class="et-al"> et al.</span>';
+    if (a.author_count > 1) authHtml += '<span style="color:var(--text-muted);font-size:12px;"> (共 ' + a.author_count + ' 位作者)</span>';
+    authHtml = '&#128100; ' + authHtml;
+
+    // Volume info
+    var volHtml = '';
+    if (a.volume) {
+        var vol = 'Vol. ' + a.volume;
+        if (a.issue) vol += ' (' + a.issue + ')';
+        if (a.pages) vol += ': ' + a.pages;
+        volHtml = '<div class="meta-item"><span class="meta-icon">&#128278;</span><span>' + vol + '</span></div>';
+    }
+
+    // DOI
+    var doiHtml = '';
+    if (a.doi) {
+        doiHtml = '<div class="meta-item"><span class="meta-icon">&#128279;</span><a href="https://doi.org/' + esc(a.doi) + '" target="_blank" style="color:var(--accent-blue);text-decoration:none;">DOI: ' + esc(a.doi) + '</a></div>';
+    }
+
+    // Pubtypes
+    var ptHtml = '';
+    if (a.pubtype && a.pubtype.length > 0) {
+        var tags = [];
+        for (var pi = 0; pi < Math.min(a.pubtype.length, 6); pi++) {
+            tags.push('<span class="pubtype-tag">' + esc(a.pubtype[pi]) + '</span>');
+        }
+        ptHtml = '<div class="pubtype-tags">' + tags.join('') + '</div>';
+    }
+
+    // Abstract
+    var absHtml = '';
+    if (a.abstract) {
+        absHtml = '<div class="article-abstract">' +
+            '<div class="abstract-label">摘要</div>' +
+            '<p class="abstract-text">' + esc(a.abstract) + '</p></div>';
+    }
+
+    // Detail panel placeholder
+    var detHtml = '<div class="detail-panel" id="detail-' + pmid + '"></div>';
+
+    // Checkbox
+    var cbHtml = '<div class="article-check-col"><input type="checkbox" class="select-checkbox article-check" id="cb-' + pmid + '" data-pmid="' + pmid + '"></div>';
+
+    return '<div class="article-card" id="card-' + pmid + '" style="animation-delay:' + delay + 's" data-pmid="' + pmid + '">' +
+        cbHtml +
+        '<div class="article-content">' +
+        '<div class="article-header">' +
+        '<div class="article-title-area">' +
+        '<h3 class="article-title"><a href="https://pubmed.ncbi.nlm.nih.gov/' + pmid + '/" target="_blank">' + esc(a.title) + '</a></h3>' +
+        '</div>' +
+        '<button class="detail-btn" id="detbtn-' + pmid + '">&#128203; 详情</button>' +
+        '<button class="translate-btn-sm" id="transbtn-' + pmid + '" data-pmid="' + pmid + '" onclick="toggleArticleTranslate(\'' + pmid + '\')">&#127760; 对照翻译</button>' +
+        '<a href="https://pubmed.ncbi.nlm.nih.gov/' + pmid + '/" target="_blank" class="pmid-badge">PMID: ' + pmid + '</a>' +
+        '</div>' +
+        ptHtml +
+        '<div class="article-meta">' +
+        '<div class="meta-item"><span class="meta-icon">&#128197;</span><span>' + esc(a.pubdate) + '</span></div>' +
+        '<div class="meta-item"><span class="meta-icon">&#128214;</span><span>' + esc(a.journal) + '</span></div>' +
+        volHtml + doiHtml +
+        '</div>' +
+        '<div class="authors">' + authHtml + '</div>' +
+        absHtml +
+        '<div class="article-translation" id="trans-' + pmid + '" style="display:none;"></div>' +
+        detHtml +
+        '</div></div>';
+}
+
+// ---- Detail Panel ----
+function handleDetailClick(e) {
+    var btn = e.currentTarget;
+    var pmid = btn.getAttribute('id').replace('detbtn-', '');
+    var panel = document.getElementById('detail-' + pmid);
+    if (!panel) return;
+
+    var isOpen = panel.classList.contains('open');
+
+    // Close all others
+    var openPanels = document.querySelectorAll('.detail-panel.open');
+    for (var i = 0; i < openPanels.length; i++) {
+        if (openPanels[i] !== panel) {
+            openPanels[i].classList.remove('open');
+            openPanels[i].innerHTML = '';
+        }
+    }
+    var activeBtns = document.querySelectorAll('.detail-btn.active');
+    for (var j = 0; j < activeBtns.length; j++) {
+        if (activeBtns[j] !== btn) {
+            activeBtns[j].classList.remove('active');
+            activeBtns[j].innerHTML = '&#128203; 详情';
+        }
+    }
+
+    if (!isOpen) {
+        var a = allArticles[pmid];
+        if (!a) return;
+        panel.innerHTML = buildDetailHTML(a);
+        panel.classList.add('open');
+        btn.classList.add('active');
+        btn.innerHTML = '&#10005; 关闭';
+        panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    } else {
+        btn.innerHTML = '&#128203; 详情';
+    }
+}
+
+function buildDetailHTML(a) {
+    // Language badges
+    var langHtml = '';
+    if (a.lang && a.lang.length > 0) {
+        var parts = [];
+        for (var li = 0; li < a.lang.length; li++) {
+            parts.push('<span style="display:inline-block;padding:2px 8px;background:var(--accent-yellow);color:#000;border-radius:4px;font-size:11px;margin:2px;">' + esc(a.lang[li]) + '</span>');
+        }
+        langHtml = parts.join('');
+    }
+
+    // Pubtypes
+    var ptHtml = '';
+    if (a.pubtype && a.pubtype.length > 0) {
+        var tags = [];
+        for (var pi = 0; pi < a.pubtype.length; pi++) {
+            tags.push('<span class="pubtype-tag">' + esc(a.pubtype[pi]) + '</span>');
+        }
+        ptHtml = tags.join('');
+    } else {
+        ptHtml = '<span style="color:var(--text-muted);font-size:13px;">无</span>';
+    }
+
+    // Abstract
+    var absHtml = '';
+    if (a.abstract) {
+        absHtml = '<div class="detail-abstract-full"><div class="detail-label">摘要</div><div class="detail-value">' + esc(a.abstract) + '</div></div>';
+    }
+
+    // DOI/PMC links
+    var doiL = a.doi ? '<a href="https://doi.org/' + esc(a.doi) + '" target="_blank" class="detail-link detail-link-doi"><span>&#128279;</span> DOI: ' + esc(a.doi) + '</a>' : '';
+    var pmcL = a.pmcid ? '<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/' + esc(a.pmcid) + '/" target="_blank" class="detail-link"><span>&#128218;</span> PMC: ' + esc(a.pmcid) + '</a>' : '';
+
+    // Journal citation
+    var citInfo = [a.volume, a.issue, a.pages].filter(Boolean).join(', ');
+    var jHtml = citInfo ? esc(a.journal) + ' (' + citInfo + ')' : esc(a.journal);
+
+    // All authors
+    var allAuthHtml = (a.all_authors || []).map(function(x) { return esc(x); }).join('; ') || 'N/A';
+
+    return '<div class="detail-grid">' +
+        '<div class="detail-item detail-full-title">' + esc(a.title) + '</div>' +
+        '<div class="detail-item detail-authors-full"><div class="detail-label">作者 (' + a.author_count + ')</div><div class="detail-value">' + allAuthHtml + '</div></div>' +
+        '<div class="detail-item"><div class="detail-label">期刊</div><div class="detail-value">' + jHtml + '</div></div>' +
+        '<div class="detail-item"><div class="detail-label">发表日期</div><div class="detail-value">' + esc(a.pubdate || 'N/A') + '</div></div>' +
+        '<div class="detail-item"><div class="detail-label">PMID</div><div class="detail-value"><a href="https://pubmed.ncbi.nlm.nih.gov/' + a.pmid + '/" target="_blank">' + a.pmid + '</a></div></div>' +
+        '<div class="detail-item"><div class="detail-label">语言</div><div class="detail-value">' + (langHtml || 'N/A') + '</div></div>' +
+        '<div class="detail-item" style="grid-column:1/-1;"><div class="detail-label">文献类型</div><div class="detail-value">' + ptHtml + '</div></div>' +
+        absHtml +
+        '<div class="detail-links">' +
+        '<a href="https://pubmed.ncbi.nlm.nih.gov/' + a.pmid + '/" target="_blank" class="detail-link"><span>&#128269;</span> PubMed</a>' +
+        doiL + pmcL +
+        '<a href="https://pubmed.ncbi.nlm.nih.gov/?linkname=pubmed_pubmed&from_uid=' + a.pmid + '" target="_blank" class="detail-link"><span>&#128279;</span> 相关文献</a>' +
+        '<a href="https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/reactome/pmid/' + a.pmid + '/pdf" target="_blank" class="detail-link"><span>&#128196;</span> 免费全文</a>' +
+        '</div></div>';
+}
+
+function genBibTeX(a) {
+    var key = 'pubmed' + a.pmid;
+    var title = (a.title || 'Untitled').replace(/[{}]/g, '');
+    var authors = (a.all_authors || []).map(function(x) { return x.split(' ').reverse().join(', '); }).join(' and ');
+    var year = (a.pubdate || '').split(' ')[0] || '';
+    var journal = (a.journal || '').replace(/[{}]/g, '');
+    var doi = a.doi || '';
+    var abs = (a.abstract || '').replace(/[{}]/g, '').replace(/\n/g, ' ');
+    return '@article{' + key + ',\n' +
+        '  title    = {' + title + '},\n' +
+        '  author   = {' + authors + '},\n' +
+        '  journal  = {' + journal + '},\n' +
+        '  year     = {' + year + '},\n' +
+        '  volume   = {' + (a.volume || '') + '},\n' +
+        '  number   = {' + (a.issue || '') + '},\n' +
+        '  pages    = {' + (a.pages || '') + '},\n' +
+        '  doi      = {' + doi + '},\n' +
+        '  pmid     = {' + a.pmid + '},\n' +
+        '  abstract = {' + abs + '}\n}';
+}
+
+// ---- Checkbox / Export ----
+function handleCheckChange(e) {
+    var cb = e.currentTarget;
+    var pmid = cb.getAttribute('data-pmid');
+    var card = document.getElementById('card-' + pmid);
+    if (!card) return;
+
+    if (cb.checked) {
+        selectedPMIDs[pmid] = true;
+        card.classList.add('selected');
+    } else {
+        delete selectedPMIDs[pmid];
+        card.classList.remove('selected');
+    }
+    updateExportUI();
+}
+
+function toggleSelectAll(e) {
+    var checked = e.currentTarget.checked;
+    var artEl = document.getElementById('articles');
+    if (!artEl) return;
+
+    var cbs = artEl.querySelectorAll('.article-check');
+    var cards = artEl.querySelectorAll('.article-card');
+
+    if (checked) {
+        for (var i = 0; i < cbs.length; i++) {
+            cbs[i].checked = true;
+            selectedPMIDs[cbs[i].getAttribute('data-pmid')] = true;
+        }
+        for (var j = 0; j < cards.length; j++) cards[j].classList.add('selected');
+    } else {
+        for (var k = 0; k < cbs.length; k++) cbs[k].checked = false;
+        selectedPMIDs = {};
+        for (var m = 0; m < cards.length; m++) cards[m].classList.remove('selected');
+    }
+    updateExportUI();
+}
+
+function updateExportUI() {
+    var cnt = Object.keys(selectedPMIDs).length;
+    var tot = Object.keys(allArticles).length;
+    var badgeEl = document.getElementById('selectedBadge');
+    var saEl = document.getElementById('selectAll');
+    var ebEl = document.getElementById('exportBibBtn');
+    var ecEl = document.getElementById('exportCsvBtn');
+
+    if (badgeEl) {
+        badgeEl.style.display = cnt > 0 ? 'inline-block' : 'none';
+        badgeEl.textContent = '\u5df2\u9009 ' + cnt + ' \u7bc7';
+    }
+    if (saEl) {
+        saEl.checked = cnt > 0 && cnt === tot;
+        saEl.indeterminate = cnt > 0 && cnt < tot;
+    }
+    if (ebEl) ebEl.disabled = cnt === 0;
+    if (ecEl) ecEl.disabled = cnt === 0;
+}
+
+function doExportBib() {
+    exportSelected('bib');
+}
+
+function doExportCsv() {
+    exportSelected('csv');
+}
+
+function exportSelected(fmt) {
+    var pmids = Object.keys(selectedPMIDs);
+    var sel = [];
+    for (var i = 0; i < pmids.length; i++) {
+        if (allArticles[pmids[i]]) sel.push(allArticles[pmids[i]]);
+    }
+    if (sel.length === 0) return;
+
+    if (fmt === 'bib') {
+        var parts = [];
+        for (var j = 0; j < sel.length; j++) parts.push(genBibTeX(sel[j]));
+        downloadFile(parts.join('\n\n'), 'pubmed_bibtex_' + Date.now() + '.bib', 'text/plain;charset=utf-8');
+    } else if (fmt === 'csv') {
+        var header = ['PMID', 'Title', 'Authors', 'Journal', 'Year', 'Volume', 'Issue', 'Pages', 'DOI', 'PubType', 'Abstract'];
+        var rows = [header];
+        for (var k = 0; k < sel.length; k++) {
+            var a = sel[k];
+            rows.push([
+                a.pmid,
+                a.title || '',
+                (a.all_authors || []).join('; '),
+                a.journal || '',
+                (a.pubdate || '').split(' ')[0],
+                a.volume || '',
+                a.issue || '',
+                a.pages || '',
+                a.doi || '',
+                (a.pubtype || []).join('; '),
+                (a.abstract || '').replace(/\n/g, ' ')
+            ]);
+        }
+        var csvLines = [];
+        for (var ri = 0; ri < rows.length; ri++) {
+            var row = rows[ri];
+            var csvRow = [];
+            for (var ci = 0; ci < row.length; ci++) {
+                var val = String(row[ci] || '');
+                if (val.indexOf('"') !== -1 || val.indexOf(',') !== -1 || val.indexOf('\n') !== -1) {
+                    val = '"' + val.replace(/"/g, '""') + '"';
+                }
+                csvRow.push(val);
+            }
+            csvLines.push(csvRow.join(','));
+        }
+        var BOM = '\uFEFF';
+        downloadFile(BOM + csvLines.join('\n'), 'pubmed_export_' + Date.now() + '.csv', 'text/csv;charset=utf-8-sig');
+    }
+}
+
+function downloadFile(content, filename, mimeType) {
+    var blob = new Blob([content], {type: mimeType});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+})();
+</script>
+</body>
+</html>
